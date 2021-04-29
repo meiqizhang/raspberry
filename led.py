@@ -13,7 +13,7 @@ class MyGPIO():
             GPIO.setmode(MyGPIO.mode)
         MyGPIO.init_count += 1
         self.idx = idx
-	initial = GPIO.HIGH if init_with_high else GPIO.LOW
+        initial = GPIO.HIGH if init_with_high else GPIO.LOW
         GPIO.setup(self.idx, GPIO.OUT, initial=initial)
 
     def __del__(self):

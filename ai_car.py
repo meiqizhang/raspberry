@@ -44,7 +44,7 @@ class MyGPIO():
     def input(self):
         if self.idx is not None:
             return GPIO.input(self.idx)
- 
+
 class MyPWM(MyGPIO):
     def __init__(self, idx, frequency):
         super(MyPWM, self).__init__(idx, init_with_output=True, init_with_high=False)
@@ -114,23 +114,28 @@ class DistanceManager(object):
         self.steer.chanage_duty_cycle(self.angle2frequency(alpha))
 
 class Wheel():
-    def __init__(self, p_idx, n_idx, enable_idx=None):
+    def __init__(self, p_idx, n_idx, ctrl_idx=None):
         self.p = MyGPIO(p_idx, init_with_output=True, init_with_high=True)
         self.n = MyGPIO(n_idx, init_with_output=True, init_with_high=True)
-        #self.ctrl = MyPWM(enable_idx, frequency=100)
+        self.ctrl = MyPWM(ctrl_idx, frequency=50)
         self.speed = 0
 
     def set_speed(self, speed):
         self.speed = speed
 
-    def forward(self):  # 正向
+    def stop(self):
+        self.p.high()
+        self.n.high()
+
+    def forward(self, speed):  # 正向
        self.p.high()
        self.n.low()
-       #self.self.ctrl(50)
+       self.ctrl.chanage_duty_cycle(speed)
 
-    def reverse(self):
+    def reverse(self, speed):
         self.p.low()
         self.n.high()
+        self.ctrl.chanage_duty_cycle(speed)
 
     def fire(self):
         while True:
@@ -139,27 +144,57 @@ class Wheel():
 class Car(object):
     def __init__(self, w1_idxs, w2_idxs, w3_idxs, w4_idxs, steer_idx=None, idx_trig=None, idx_ping=None,
                        steer_led_r=None, steer_led_g=None, steer_led_b=None):
-        self.w1 = Wheel(w1_idxs[0], w1_idxs[1])
-        self.w2 = Wheel(w2_idxs[0], w2_idxs[1])
-        self.w3 = Wheel(w3_idxs[0], w3_idxs[1])
-        self.w4 = Wheel(w4_idxs[0], w4_idxs[1])
+        self.w1 = Wheel(w1_idxs[0], w1_idxs[1], 27)
+        self.w2 = Wheel(w2_idxs[0], w2_idxs[1], 22)
+        self.w3 = Wheel(w3_idxs[0], w3_idxs[1], 17)
+        self.w4 = Wheel(w4_idxs[0], w4_idxs[1], 4)
 
         if steer_idx is not None:
             self.distance_manager = DistanceManager(steer_idx, idx_trig=idx_trig, idx_ping=idx_ping, idx_r=steer_led_r, idx_g=steer_led_g, idx_b=steer_led_b)
 
-    def forward(self, t):
-        self.w1.forward()
-        self.w2.forward()
-        self.w3.forward()
-        self.w4.forward()
+    def forward(self, speed):
+        self.w1.forward(speed)
+        self.w2.forward(speed)
+        self.w3.forward(speed)
+        self.w4.forward(speed)
+
+    def stop(self):
+        self.w1.stop()
+        self.w2.stop()
+        self.w3.stop()
+        self.w4.stop()
+
+    def run(self):
         while True:
-            t = random.randint(0, 180)
-            dist = self.distance_manager.calc_distance(t)
-            print("turn %d, dist=%.2fcm" % (t, dist))
+            min_dist = 0xFFFF
+            angles = [70, 90]
+            self.stop()
+            for alpha in angles:
+                dist = self.distance_manager.calc_distance(alpha)
+                print("turn %d angle, dist=%d" % (alpha, dist))
+                time.sleep(0.1)
+                if dist < min_dist:
+                    min_dist = dist
+
+            print("min dist=%.2fcm" % (min_dist))
+
+            #min_dist = 100
+            if min_dist > 100: # 15cm
+                self.forward(80)
+            elif min_dist > 50:
+                self.forward(50)
+            elif min_dist > 20:
+                self.forward(20)
+            else:
+                self.stop()
             time.sleep(1)
 
 
 def main():
+    #w = Wheel(18, 23, 4)
+    #w.forward(50)
+    #time.sleep(10)
+
     w1 = [12, 16]
     w2 = [21, 20]
     w3 = [25, 24]
@@ -172,7 +207,7 @@ def main():
     idx_ping = 26
 
     car = Car(w1, w2, w3, w4, steer_idx, steer_led_r=steer_led_r, steer_led_g=steer_led_g, idx_trig=19, idx_ping=26)
-    car.forward(10)
+    car.run()
 
 
 if __name__ == "__main__":

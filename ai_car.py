@@ -158,6 +158,20 @@ class Car(object):
         self.w3.forward(speed)
         self.w4.forward(speed)
 
+    def turn_left(self):
+        speed = 90
+        self.w1.reverse(speed)
+        self.w3.reverse(speed)
+        self.w2.forward(speed)
+        self.w4.forward(speed)
+
+    def turn_right(self):
+        speed = 90
+        self.w1.forward(speed)
+        self.w3.forward(speed)
+        self.w2.reverse(speed)
+        self.w4.reverse(speed)
+
     def stop(self):
         self.w1.stop()
         self.w2.stop()
@@ -165,9 +179,13 @@ class Car(object):
         self.w4.stop()
 
     def run(self):
+        dist = self.distance_manager.calc_distance(145)
+        print(dist)
+        #return
+
         while True:
             min_dist = 0xFFFF
-            angles = [70, 90]
+            angles = [10, 30, 50, 70, 110, 130, 150, 90]
             self.stop()
             for alpha in angles:
                 dist = self.distance_manager.calc_distance(alpha)
@@ -178,16 +196,19 @@ class Car(object):
 
             print("min dist=%.2fcm" % (min_dist))
 
-            #min_dist = 100
-            if min_dist > 100: # 15cm
-                self.forward(80)
-            elif min_dist > 50:
-                self.forward(50)
-            elif min_dist > 20:
-                self.forward(20)
+            if min_dist > 20:
+                if min_dist > 100: # 15cm
+                    self.forward(90)
+                elif min_dist > 50:
+                    self.forward(60)
+                else:
+                    self.forward(30)
+                time.sleep(0.8)
             else:
-                self.stop()
-            time.sleep(1)
+                # check left
+                dist = self.distance_manager.calc_distance(1)
+                self.turn_right()
+                time.sleep(0.5)
 
 
 def main():
